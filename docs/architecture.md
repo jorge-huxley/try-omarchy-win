@@ -28,7 +28,7 @@ Linux then boots normally from the bundled kernel and disk, and Omarchy runs
 inside Linux. Graphics travel from Linux through virtio-gpu to the SDL window,
 rendered in the guest by llvmpipe software OpenGL. Storage uses virtio-blk,
 networking uses user-mode slirp, audio uses the QEMU intel-hda controller with
-an hda-duplex codec backed by the WASAPI host audio device, and input uses
+an hda-duplex codec backed by the DirectSound host audio device, and input uses
 virtio keyboard and tablet devices.
 
 ## The x86_64 image
@@ -49,8 +49,9 @@ flow creates the account on first boot.
   `omarchy.qemu=1` kernel option, and a small display-sync daemon that keeps the
   guest mode synchronized when QEMU changes the virtual EDID.
 - macOS-only pieces are removed rather than ported: the native PipeWire
-  audio bridge (Windows audio is handled entirely by QEMU's WASAPI backend) and
-  the ARM binary-compatibility layer (both host and guest are x86_64).
+  audio bridge (Windows audio is handled entirely by QEMU's DirectSound
+  backend) and the ARM binary-compatibility layer (both host and guest are
+  x86_64).
 
 Nothing is overwritten while the VM runs. The packaged factory disk remains
 unchanged. Normal launches use one private writable disk under

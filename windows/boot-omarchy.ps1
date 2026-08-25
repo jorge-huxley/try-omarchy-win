@@ -50,7 +50,7 @@ try {
     -device virtio-keyboard-pci -device virtio-tablet-pci `
     -device virtio-net-pci,netdev=n0 -netdev user,id=n0 `
     -device virtio-rng-pci -device virtio-balloon-pci `
-    -device intel-hda -device hda-duplex -audiodev wasapi,id=snd `
+    -device intel-hda -device hda-duplex -audiodev dsound,id=snd `
     -display sdl,gl=off
 } finally {
   if ($tmp -and (Test-Path $tmp)) { Remove-Item -Recurse -Force $tmp }

@@ -117,7 +117,7 @@
     "audio": {
       "controller": "intel-hda",
       "codec": "hda-duplex",
-      "backend": "wasapi",
+      "backend": "dsound",
       "duplex": true
     },
     "storage": {
