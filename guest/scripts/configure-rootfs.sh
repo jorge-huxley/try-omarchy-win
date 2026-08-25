@@ -53,36 +53,19 @@ esac
 
 architecture=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["image"]["architecture"])' "$spec")
 profile=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["guest"].get("profile"))' "$spec")
-[[ $architecture == aarch64 ]] || fail "native guest architecture must be aarch64"
+[[ $architecture == x86_64 ]] || fail "native guest architecture must be x86_64"
 [[ $profile == factory ]] || fail "native guest profile must be factory"
 
 mkdir -p "$root/etc" "$root/etc/skel" "$root/usr/share/try-omarchy"
 cp -a "$guest_dir/factory-overlay/." "$root/"
-mkdir -p "$root/usr/local/bin"
-install -m 0755 "$guest_dir/compat/ttfx-arm64" "$root/usr/local/bin/ttfx"
 
 # Session-config customizations are additive, so each fragment remains
-# independently auditable against Basecamp's pinned config. The native overlay
-# also carries one deliberate command replacement for safe PipeWire input
-# switching. The display fragment selects Cocoa's host-composited cursor path
-# and keeps the guest mode synchronized when QEMU changes the virtual EDID.
+# independently auditable against Basecamp's pinned config. The display
+# fragment keeps the guest mode synchronized when QEMU changes the virtual
+# EDID.
 cp -a "$guest_dir/native-overlay/." "$root/"
-chmod 0755 \
-  "$root/usr/bin/omarchy-audio-input-set-default" \
-  "$root/usr/local/bin/omarchy-native-audio-bridge" \
-  "$root/usr/local/bin/omarchy-native-display-sync"
-audio_helper_source_digest=$(sha256sum \
-  "$guest_dir/native-overlay/usr/bin/omarchy-audio-input-set-default")
-audio_helper_source_digest=${audio_helper_source_digest%% *}
-audio_helper_installed_digest=$(sha256sum \
-  "$root/usr/bin/omarchy-audio-input-set-default")
-audio_helper_installed_digest=${audio_helper_installed_digest%% *}
-[[ $audio_helper_installed_digest == "$audio_helper_source_digest" ]] || \
-  fail "native audio input helper did not replace the upstream command"
-mkdir -p "$root/etc/systemd/user/default.target.wants"
-ln -sfn /usr/lib/systemd/user/omarchy-native-audio-bridge.service \
-  "$root/etc/systemd/user/default.target.wants/omarchy-native-audio-bridge.service"
-cat "$guest_dir/fragments/hypr-monitors-arm-qemu.append.lua" >>"$root/etc/skel/.config/hypr/monitors.lua"
+chmod 0755 "$root/usr/local/bin/omarchy-native-display-sync"
+cat "$guest_dir/fragments/hypr-monitors-qemu.append.lua" >>"$root/etc/skel/.config/hypr/monitors.lua"
 
 hostname=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["guest"]["hostname"])' "$spec")
 printf '%s\n' "$hostname" >"$root/etc/hostname"
@@ -98,7 +81,7 @@ printf 'KEYMAP=us\n' >"$root/etc/vconsole.conf"
 : >"$root/etc/machine-id"
 ln -sfn /usr/share/zoneinfo/UTC "$root/etc/localtime"
 
-# Keep the reviewed Arch Linux ARM package and mirror configuration.
+# Keep the reviewed Arch package and mirror configuration.
 pacman_input=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["inputs"].get("pacmanConfig", ""))' "$spec")
 [[ -n $pacman_input ]] || fail "native guest spec must provide pacmanConfig"
 install -m 0644 "$guest_dir/$pacman_input" "$root/etc/pacman.conf"

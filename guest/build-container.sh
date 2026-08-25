@@ -62,15 +62,15 @@ import sys
 spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
 architecture = spec["image"]["architecture"]
 profile = spec["guest"].get("profile")
-if architecture != "aarch64":
-    raise SystemExit(f"ARM builder requires an aarch64 spec, got {architecture}")
+if architecture != "x86_64":
+    raise SystemExit(f"x86 builder requires an x86_64 spec, got {architecture}")
 if profile != "factory":
     raise SystemExit(f"native guest requires the factory profile, got {profile}")
 print(f"{architecture}\t{profile}")
 PY
 ) || fail "invalid native guest spec"
 IFS=$'\t' read -r architecture profile <<<"$plan_fields"
-[[ -n $architecture && -n $profile ]] || fail "could not read ARM64 build spec"
+[[ -n $architecture && -n $profile ]] || fail "could not read x86_64 build spec"
 
 if [[ -n $refresh_package_lock && $output_set == 1 ]]; then
   fail "--output and --refresh-package-lock are mutually exclusive"
@@ -84,7 +84,7 @@ fi
 [[ $work_volume =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || fail "invalid Docker volume name: $work_volume"
 
 if (( dry_run )); then
-  printf 'architecture=%s\nplatform=linux/arm64\nprofile=%s\nspec=%s\noutput=%s\nwork-volume=%s\n' \
+  printf 'architecture=%s\nplatform=linux/amd64\nprofile=%s\nspec=%s\noutput=%s\nwork-volume=%s\n' \
     "$architecture" "$profile" "$spec" "$output" "$work_volume"
   if [[ -n $refresh_package_lock ]]; then
     printf 'mode=refresh-package-lock\npackage-lock-output=%s\n' "$refresh_package_lock"
@@ -97,7 +97,7 @@ fi
 command -v docker >/dev/null || fail "docker is required"
 
 builder_image=try-omarchy-guest-builder
-docker build --platform linux/arm64 -f "$guest_dir/Containerfile" -t "$builder_image" "$repo_dir"
+docker build --platform linux/amd64 -f "$guest_dir/Containerfile" -t "$builder_image" "$repo_dir"
 builder_digest=$(docker image inspect --format '{{.Id}}' "$builder_image")
 
 if [[ -n $refresh_package_lock ]]; then
@@ -106,7 +106,7 @@ if [[ -n $refresh_package_lock ]]; then
   lock_parent=$(dirname "$refresh_package_lock")
   mkdir -p "$lock_parent"
   lock_parent=$(cd "$lock_parent" && pwd)
-  docker run --rm --platform linux/arm64 \
+  docker run --rm --platform linux/amd64 \
     --entrypoint /workspace/guest/scripts/refresh-package-lock.sh \
     -e OMARCHY_PACMAN_DISABLE_SANDBOX=1 \
     -v "$repo_dir:/workspace:ro" \
@@ -119,7 +119,7 @@ fi
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
 docker volume create --label dev.tryomarchy.role=guest-work "$work_volume" >/dev/null
-docker run --rm --platform linux/arm64 --privileged \
+docker run --rm --platform linux/amd64 --privileged \
   -e OMARCHY_BUILDER_IMAGE_DIGEST="$builder_digest" \
   -e OMARCHY_PACMAN_DISABLE_SANDBOX=1 \
   -v "$repo_dir:/workspace:ro" \

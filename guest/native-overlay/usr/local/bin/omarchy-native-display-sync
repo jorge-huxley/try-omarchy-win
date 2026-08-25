@@ -310,7 +310,7 @@ if [[ ${1:-} == --from-stdin ]]; then
   exit 0
 fi
 
-# QEMU changes the virtio-gpu EDID whenever its Cocoa window changes size.
+# QEMU changes the virtio-gpu EDID whenever its SDL window changes size.
 # Linux exposes that as a DRM hotplug change.
 apply_preferred_modes
 while true; do

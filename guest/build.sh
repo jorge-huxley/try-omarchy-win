@@ -70,7 +70,6 @@ packages_file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[
 package_lock_file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["inputs"]["packageLock"])' "$spec")
 packages_file="$guest_dir/$packages_file"
 package_lock_file="$guest_dir/$package_lock_file"
-[[ $architecture == "aarch64" ]] || fail "native guest architecture must be aarch64"
 [[ $(uname -m) == "$architecture" ]] || fail "guest packages for $architecture must be assembled on $architecture"
 [[ -f $packages_file ]] || fail "package list not found: $packages_file"
 [[ -f $package_lock_file ]] || fail "package lock not found: $package_lock_file"

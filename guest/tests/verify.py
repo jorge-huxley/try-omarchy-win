@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fast, host-independent checks for the native ARM64 guest build contract."""
+"""Fast, host-independent checks for the native x86_64 guest build contract."""
 
 from __future__ import annotations
 
@@ -41,11 +41,11 @@ def main() -> None:
 
     spec = json_file(GUEST / "spec.json")
     check(spec.get("schemaVersion") == 1, "guest spec schema is supported")
-    check(spec["image"]["architecture"] == "aarch64", "guest is ARM64-only")
+    check(spec["image"]["architecture"] == "x86_64", "guest is x86_64-only")
     check(spec["guest"].get("profile") == "factory", "guest is an unprovisioned factory image")
     check(spec["guest"].get("username") is None, "factory image has no baked-in user")
-    check(spec["runtime"]["virtualMachineMonitor"] == "qemu-system-aarch64", "runtime uses native ARM QEMU")
-    check(spec["runtime"]["hypervisor"] == "hvf", "runtime uses Apple Hypervisor.framework")
+    check(spec["runtime"]["virtualMachineMonitor"] == "qemu-system-x86_64", "runtime uses native x86 QEMU")
+    check(spec["runtime"]["hypervisor"] == "whpx", "runtime uses Windows Hypervisor Platform")
     check(spec["runtime"]["storage"]["expandedSizeMiB"] == 24576, "working disk expands to 24 GiB")
     check(set(spec["inputs"]) == {"packages", "packageLock", "pacmanConfig"}, "spec has a minimal input set")
     for path in spec["inputs"].values():
@@ -53,7 +53,7 @@ def main() -> None:
 
     package_text = (GUEST / spec["inputs"]["packages"]).read_bytes()
     package_lock = json_file(GUEST / spec["inputs"]["packageLock"])
-    check(package_lock.get("architecture") == "aarch64", "package lock is ARM64")
+    check(package_lock.get("architecture") == "x86_64", "package lock is x86_64")
     check(
         package_lock.get("requestedFileSha256") == hashlib.sha256(package_text).hexdigest(),
         "package lock matches packages.txt",
@@ -62,14 +62,13 @@ def main() -> None:
     check(isinstance(packages, dict) and len(packages) > 100, "package transaction is fully locked")
 
     container = read(GUEST / "build-container.sh")
-    check("linux/arm64" in container and '"$guest_dir/Containerfile"' in container, "container builder targets ARM64")
+    check("linux/amd64" in container and '"$guest_dir/Containerfile"' in container, "container builder targets AMD64")
     check('output="$repo_dir/dist/guest"' in container, "guest output defaults to dist/guest")
     check("try-omarchy-guest-work" in container, "guest cache has a project-scoped Docker volume")
 
     configure = read(GUEST / "scripts/configure-rootfs.sh")
     check("factory-overlay" in configure and "native-overlay" in configure, "rootfs receives only native factory overlays")
     check("omarchy-provision-owner.service" in configure, "first boot uses upstream owner provisioning")
-    check("omarchy-native-audio-bridge" in configure, "guest installs native host-audio integration")
     zram_override = read(
         GUEST
         / "factory-overlay/etc/systemd/zram-generator.conf.d/99-try-omarchy.conf"
@@ -77,39 +76,25 @@ def main() -> None:
     check(
         "[zram0]" in zram_override
         and "compression-algorithm = lzo-rle" in zram_override,
-        "factory zram uses the ARM kernel's supported lzo-rle backend",
-    )
-    check(
-        '"$root/usr/bin/omarchy-audio-input-set-default"' in configure
-        and "audio_helper_source_digest=$(sha256sum" in configure
-        and "native audio input helper did not replace" in configure,
-        "native input selection replaces the upstream command",
+        "factory zram uses the lzo-rle backend",
     )
     check("cmp -s" not in configure, "rootfs configuration uses only declared build tools")
 
     finalizer = read(GUEST / "scripts/finalize-rootfs.sh")
-    check("factory" in finalizer and "aarch64" in finalizer, "finalizer enforces the native factory contract")
+    check("factory" in finalizer and "x86_64" in finalizer, "finalizer enforces the native factory contract")
     check("systemd-growfs-root.service" in finalizer, "factory disk grows on first boot")
 
     manifest_writer = read(GUEST / "scripts/write-guest-manifest.py")
     check('"kind": "try-omarchy-guest-artifacts"' in manifest_writer, "new artifacts use the native manifest identity")
 
-    audio_bridge = GUEST / "native-overlay/usr/local/bin/omarchy-native-audio-bridge"
-    check(audio_bridge.stat().st_mode & stat.S_IXUSR != 0, "native audio bridge is executable")
-    with tempfile.TemporaryDirectory() as temporary:
-        py_compile.compile(str(audio_bridge), cfile=str(Path(temporary) / "audio.pyc"), doraise=True)
-    check(True, "native audio bridge compiles")
-
-    audio_input_helper = GUEST / "native-overlay/usr/bin/omarchy-audio-input-set-default"
-    check(audio_input_helper.stat().st_mode & stat.S_IXUSR != 0, "native audio input helper is executable")
 
     display_sync = GUEST / "native-overlay/usr/local/bin/omarchy-native-display-sync"
     check(display_sync.stat().st_mode & stat.S_IXUSR != 0, "native display sync is executable")
-    monitor_fragment = read(GUEST / "fragments/hypr-monitors-arm-qemu.append.lua")
+    monitor_fragment = read(GUEST / "fragments/hypr-monitors-qemu.append.lua")
     check(
         'o.exec_on_start("/usr/local/bin/omarchy-native-display-sync")'
         in monitor_fragment,
-        "ARM VirGL profile starts native display sync",
+        "QEMU profile starts native display sync",
     )
     with tempfile.TemporaryDirectory() as temporary:
         temporary_path = Path(temporary)
@@ -122,7 +107,7 @@ def main() -> None:
         (connector / "status").write_text("connected\n", encoding="utf-8")
         qemu_edid = bytearray(384)
         qemu_edid[:8] = b"\x00\xff\xff\xff\xff\xff\xff\x00"
-        # A 2560x1440-point Cocoa window encoded at 110 logical DPI. With 2x
+        # A 2560x1440-point host window encoded at 110 logical DPI. With 2x
         # backing this 5120x2880 mode maps to Hyprland scale 2.
         qemu_edid[21:23] = bytes([59, 33])
         qemu_edid[126] = 2

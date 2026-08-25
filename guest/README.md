@@ -1,7 +1,7 @@
-# ARM64 guest image
+# x86_64 guest image
 
 This directory builds the single guest supported by Try Omarchy: our own
-unprovisioned ARM64 Arch Linux factory image containing pinned upstream Omarchy
+unprovisioned x86_64 Arch Linux factory image containing pinned upstream Omarchy
 source. It is not a prebuilt image published by Basecamp.
 
 From the repository root:
@@ -10,7 +10,7 @@ From the repository root:
 make guest
 ```
 
-The privileged ARM64 Docker build writes verified artifacts to `dist/guest/`.
+The privileged AMD64 Docker build writes verified artifacts to `dist/guest/`.
 Its persistent package/source cache lives in a project-scoped Docker volume, so
 repeat builds do not start from zero.
 
@@ -24,7 +24,7 @@ guest/test
 ```
 
 `spec.json` is the authoritative image and runtime contract. `packages.txt` is
-the requested transaction and `packages.lock.json` pins the full resolved ARM64
+the requested transaction and `packages.lock.json` pins the full resolved x86_64
 package set. Source repositories, commits, downloads, versions, and hashes are
 reviewed inputs rather than floating build dependencies.
 

@@ -1,5 +1,5 @@
-# ARM64 transaction for the real Quattro first-boot owner-provisioning flow.
-archlinuxarm-keyring
+# x86_64 transaction for the real Quattro first-boot owner-provisioning flow.
+archlinux-keyring
 base
 bash-completion
 bat
@@ -31,7 +31,7 @@ jq
 less
 libnotify
 libsecret
-linux-aarch64
+linux
 mesa
 mkinitcpio
 mpv

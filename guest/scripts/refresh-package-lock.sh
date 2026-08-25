@@ -48,7 +48,7 @@ spec=$(cd "$(dirname "$spec")" && pwd)/$(basename "$spec")
 architecture=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["image"]["architecture"])' "$spec")
 packages_input=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["inputs"]["packages"])' "$spec")
 packages_file="$guest_dir/$packages_input"
-[[ $architecture == "aarch64" ]] || fail "native guest architecture must be aarch64"
+[[ $architecture == "x86_64" ]] || fail "native guest architecture must be x86_64"
 [[ -f $packages_file ]] || fail "package list not found: $packages_file"
 [[ -n $output ]] || fail "--output is required"
 [[ $(uname -s) == "Linux" && $(uname -m) == "$architecture" ]] \

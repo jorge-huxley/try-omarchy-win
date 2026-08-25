@@ -6,7 +6,7 @@ usage() {
   cat <<'USAGE'
 Usage: register-pinned-mise.sh --root ROOT --work WORK --spec SPEC --pacman-config CONFIG
 
-Downloads the spec-pinned official mise ARM64 archive, verifies the archive and
+Downloads the spec-pinned official mise x86_64 archive, verifies the archive and
 extracted binary digests, and installs its runtime files as a local Arch
 package staged in the guest's immutable local repository.
 USAGE
@@ -92,19 +92,19 @@ license=${metadata[6]}
 architecture=${metadata[7]}
 source_date_epoch=${metadata[8]}
 
-[[ $architecture == aarch64 ]] || fail "pinned mise component supports only aarch64"
+[[ $architecture == x86_64 ]] || fail "pinned mise component supports only x86_64"
 [[ $version =~ ^[0-9]{4}\.[0-9]+\.[0-9]+$ ]] || fail "invalid mise version: $version"
 [[ $sha256 =~ ^[0-9a-f]{64}$ ]] || fail "invalid mise archive digest"
 [[ $binary_sha256 =~ ^[0-9a-f]{64}$ ]] || fail "invalid mise binary digest"
-[[ $reported_version == "$version linux-arm64 ("*')' ]] || fail "invalid mise reported version"
+[[ $reported_version == "$version linux-x64 ("*')' ]] || fail "invalid mise reported version"
 [[ $license == MIT ]] || fail "unexpected mise license: $license"
 [[ $source_date_epoch =~ ^[0-9]+$ ]] || fail "invalid source date epoch"
-expected_url="https://github.com/jdx/mise/releases/download/v$version/mise-v$version-linux-arm64.tar.xz"
+expected_url="https://github.com/jdx/mise/releases/download/v$version/mise-v$version-linux-x64.tar.xz"
 [[ $url == "$expected_url" ]] || fail "mise URL does not match the pinned official release"
 
 cache_dir="$work/download-cache"
 install -d -m 0755 "$cache_dir"
-asset_cache="$cache_dir/mise-v$version-linux-arm64.tar.xz"
+asset_cache="$cache_dir/mise-v$version-linux-x64.tar.xz"
 
 verify_file() {
   local expected=$1
@@ -169,12 +169,12 @@ cat >"$stage/.PKGINFO" <<EOF
 pkgname = $package_name
 pkgbase = $package_name
 pkgver = $package_version
-pkgdesc = Pinned official mise $version binary for the Omarchy ARM64 guest
+pkgdesc = Pinned official mise $version binary for the Omarchy x86_64 guest
 url = https://github.com/jdx/mise
 builddate = $source_date_epoch
 packager = Try Omarchy reproducible guest builder
 size = $installed_size
-arch = aarch64
+arch = x86_64
 license = MIT
 provides = mise=$version
 conflict = mise
@@ -182,7 +182,7 @@ depend = glibc
 depend = gcc-libs
 EOF
 
-package_archive="$stage/$package_name-$package_version-aarch64.pkg.tar.zst"
+package_archive="$stage/$package_name-$package_version-x86_64.pkg.tar.zst"
 tar \
   --sort=name \
   --mtime="@$source_date_epoch" \
