@@ -1,76 +1,74 @@
 # Architecture
 
-Try Omarchy packages three pieces into one macOS app:
+This fork retargets Try Omarchy to Windows. Two pieces exist today:
 
-1. A small Swift/AppKit launcher for the macOS side.
-2. A patched QEMU runtime that creates and runs the virtual machine.
-3. An ARM64 Arch Linux image containing pinned upstream Omarchy source.
+1. A reproducible x86_64 Arch Linux image containing pinned upstream Omarchy source.
+2. QEMU boot scripts that run that image under Windows Hypervisor Platform.
+
+A native Windows launcher is planned; until it lands, PowerShell scripts drive
+QEMU directly. The macOS Swift/AppKit launcher remains under `macos/` untouched
+as the porting reference for that work.
 
 ```text
-Try Omarchy.app
-└── Swift/AppKit launcher
-    └── QEMU + Apple Hypervisor Framework
-        └── project-built ARM64 Linux image
-            └── Omarchy desktop
+windows\boot-omarchy.ps1
+└── QEMU + Windows Hypervisor Platform
+    └── project-built x86_64 Linux image
+        └── Omarchy desktop
 ```
 
-## What happens when the app opens
+## What happens when the boot script runs
 
-The Swift launcher presents a start menu on every app open. It reports optional
-macOS Accessibility and Microphone permission state, handles confirmed factory
-resets, startup, shutdown, and host audio devices. It prepares a writable copy
-of the Linux disk and starts QEMU. QEMU's Cocoa input layer uses the shared
-Accessibility grant to capture system-wide Command chords and deliver Command
-as guest Super. Swift does not replace QEMU or run the Omarchy desktop itself.
-
-QEMU presents the hardware that Linux expects: CPUs, memory, storage, networking,
-graphics, audio, keyboard, and pointer devices. Because both the Mac and the
-guest are ARM64, Apple Hypervisor Framework runs the guest CPU instructions on
-the Apple Silicon processor. QEMU provides the virtual devices around that CPU.
+The script prepares a writable copy of the factory disk — a full copy, because
+NTFS has no clonefile — expands it to its working size, and starts
+`qemu-system-x86_64`. Because both the host CPU and the guest are x86_64,
+Windows Hypervisor Platform runs the guest CPU instructions natively. QEMU
+provides the virtual devices around that CPU.
 
 Linux then boots normally from the bundled kernel and disk, and Omarchy runs
-inside Linux. Graphics travel from Linux through virtio-gpu and VirGL to the
-native Cocoa window. Storage, networking, audio, and input use their matching
-QEMU virtual devices and host backends.
+inside Linux. Graphics travel from Linux through virtio-gpu to the SDL window,
+rendered in the guest by llvmpipe software OpenGL. Storage uses virtio-blk,
+networking uses user-mode slirp, audio uses the QEMU intel-hda controller with
+an hda-duplex codec backed by the WASAPI host audio device, and input uses
+virtio keyboard and tablet devices.
 
-## The ARM64 image
+## The x86_64 image
 
 The guest image is built by this project; it is not an official prebuilt image
-from Basecamp. The `guest/` builder starts with pinned Arch Linux ARM packages,
-installs a pinned upstream Omarchy source tree, and adds the small configuration
-and compatibility layer needed for ARM64 and QEMU.
+from Basecamp. The `guest/` builder starts with pinned official Arch Linux
+packages plus Omarchy's signed stable repository, installs a pinned upstream
+Omarchy source tree, and adds the small configuration layer needed for QEMU.
 
-The result is upstream Omarchy running in a project-built ARM64 Linux image. The
-image has no preconfigured user, so Omarchy's upstream owner-provisioning flow
-creates the account on first boot.
+The result is upstream Omarchy running in a project-built x86_64 Linux image.
+The image has no preconfigured user, so Omarchy's upstream owner-provisioning
+flow creates the account on first boot.
 
 ## What this project changes
 
-- The Swift code is a separate macOS launcher and helper.
-- A few QEMU C and Objective-C files are patched before QEMU is compiled. These
-  patches cover the Cocoa app identity, display behavior, graphics integration,
-  and host audio-device routing.
 - The pinned Omarchy runtime trees are copied from upstream. Guest overlays add
-  the QEMU and ARM64 integration around them.
+  the QEMU integration around them: a Hyprland monitor fragment guarded by the
+  `omarchy.qemu=1` kernel option, and a small display-sync daemon that keeps the
+  guest mode synchronized when QEMU changes the virtual EDID.
+- macOS-only pieces are removed rather than ported: the native PipeWire
+  audio bridge (Windows audio is handled entirely by QEMU's WASAPI backend) and
+  the ARM binary-compatibility layer (both host and guest are x86_64).
 
-Nothing is overwritten while the app runs. The app bundle and packaged factory
-disk remain unchanged. Normal user launches use one private writable disk under
-`~/Library/Application Support/Try Omarchy/VM/v1`. Its factory-image identity is immutable:
-the launcher never pairs a saved root filesystem with a different bundled kernel
-or initramfs. When a guest build changes, the start menu asks for an explicitly
-confirmed factory reset before creating the replacement disk. A compatible
-legacy identity-keyed disk can be migrated into the single workspace without
-discarding its contents. If several recognized legacy disks exist, normal launch
-stops at the start menu; confirmed reset safely removes them before publishing
-one fresh workspace. Unrecognized host files are always left untouched.
-Ephemeral mode uses a disposable disk.
+Nothing is overwritten while the VM runs. The packaged factory disk remains
+unchanged. Normal launches use one private writable disk under
+`%LOCALAPPDATA%\TryOmarchy\VM\v1`; its factory-image identity is immutable —
+the boot scripts never pair a saved root filesystem with a different bundled
+kernel or initramfs. When a guest build changes identity, removing that disk is
+an explicitly confirmed action: `-ResetStorage` demands typing `RESET` before
+deleting it. Ephemeral mode (`-Ephemeral`) uses a disposable disk. The future
+native launcher will enforce the same confirmed-reset contract automatically.
 
 ## Build layout
 
-- `guest/` reproducibly assembles the unprovisioned ARM64 image in a privileged
-  ARM64 Docker container. Inputs are commit-, version-, and checksum-pinned.
-- `macos/` builds the Swift launcher and a patched QEMU runtime. The runtime is
-  isolated, relocated, and signed before it enters the app bundle.
+- `guest/` reproducibly assembles the unprovisioned x86_64 image in a privileged
+  AMD64 Docker container. Inputs are commit-, version-, and checksum-pinned.
+- `windows/` enables Windows Hypervisor Platform and encodes the QEMU device
+  model that mirrors the spec's runtime section.
+- `macos/` is the frozen macOS launcher, kept as the reference for the future
+  native Windows launcher.
 - `dist/` is the only public output directory. It is generated and ignored by
   Git.
 

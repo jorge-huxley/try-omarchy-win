@@ -1,4 +1,5 @@
 # Releasing
+> macOS release process — legacy reference; the Windows release path lands with the future launcher.
 
 Releases are Apple Silicon-only and require macOS 15 or newer.
 
