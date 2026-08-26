@@ -43,6 +43,7 @@ try {
   & $qemuPath `
     -accel whpx `
     -machine q35 -cpu qemu64 -smp 4 -m 4096 `
+    -drive "file=$diskPath,format=raw,if=virtio" `
     -kernel (Join-Path $GuestDir "vmlinuz-linux") `
     -initrd (Join-Path $GuestDir "initramfs-linux.img") `
     -append $kernelCmdline `
