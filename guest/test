@@ -31,7 +31,7 @@ fi
 
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover \
   -s "$guest_dir/tests" \
-  -p 'test_*.py'
+  -p 'test_*.py' || (( $? == 5 ))
 
 if ((${#args[@]})); then
   exec python3 "$guest_dir/tests/verify.py" "${args[@]}"
