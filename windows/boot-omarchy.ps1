@@ -34,6 +34,7 @@ try {
   }
   if (-not (Test-Path $diskPath)) {
     Copy-Item (Join-Path $GuestDir "rootfs.ext4") $diskPath   # full copy: NTFS has no clonefile
+    fsutil sparse setflag $diskPath | Out-Null   # allocate on write; hosts without 24 GiB spare still boot
     $fs = [IO.File]::Open($diskPath, "Open", "ReadWrite")
     try { $fs.SetLength([int64]$expandedMiB * 1MB) } finally { $fs.Dispose() }
     Write-Host "Prepared writable disk: $diskPath"
