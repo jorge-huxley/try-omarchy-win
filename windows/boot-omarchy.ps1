@@ -34,7 +34,7 @@ try {
   }
   if (-not (Test-Path $diskPath)) {
     Copy-Item (Join-Path $GuestDir "rootfs.ext4") $diskPath   # full copy: NTFS has no clonefile
-    $fs = [IO.File]::Open($diskPath, "Append", "ReadWrite")
+    $fs = [IO.File]::Open($diskPath, "Open", "ReadWrite")
     try { $fs.SetLength([int64]$expandedMiB * 1MB) } finally { $fs.Dispose() }
     Write-Host "Prepared writable disk: $diskPath"
   }
