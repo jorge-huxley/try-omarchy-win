@@ -46,7 +46,7 @@ try {
     -drive "file=$diskPath,format=raw,if=virtio" `
     -kernel (Join-Path $GuestDir "vmlinuz-linux") `
     -initrd (Join-Path $GuestDir "initramfs-linux.img") `
-    -serial "file=$(Join-Path $DiskDir 'serial.log')" `
+    -chardev "file,id=seriallog,path=$(Join-Path $DiskDir 'serial.log')" -serial chardev:seriallog `
     -append $kernelCmdline `
     -device virtio-gpu-pci `
     -device virtio-keyboard-pci -device virtio-tablet-pci `
