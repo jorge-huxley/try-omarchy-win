@@ -13,7 +13,7 @@ if (-not $qemu) { $qemuPath = Join-Path $env:ProgramFiles "qemu\qemu-system-x86_
 if (-not (Test-Path $qemuPath)) { throw "qemu-system-x86_64.exe not found; install QEMU (winget install Software.QEMU)" }
 
 $spec = Get-Content (Join-Path $GuestDir "build-spec.json") | ConvertFrom-Json
-$kernelCmdline = $spec.runtime.kernelCommandLine
+$kernelCmdline = $spec.runtime.kernelCommandLine -replace "console=hvc0", "console=tty1"
 $expandedMiB = $spec.runtime.storage.expandedSizeMiB
 
 if ($ResetStorage -and (Test-Path $DiskDir)) {
